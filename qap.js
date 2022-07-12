@@ -134,7 +134,7 @@ class Qap {
 
     rank() {
         if (this.size() < 2)
-            return 0;
+            return this.size();
         var M = [];
         let p1 = null;
         for (let point of this.points) {
