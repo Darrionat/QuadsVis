@@ -59,10 +59,14 @@ function createListeners() {
         qap.changeDim(dim);
         setTimeout(drawAffSpace);
     }
-    dimDown.onclick = () => { dim--;
-        updateDimText() };
-    dimUp.onclick = () => { dim++;
-        updateDimText() };
+    dimDown.onclick = () => {
+        dim--;
+        updateDimText()
+    };
+    dimUp.onclick = () => {
+        dim++;
+        updateDimText()
+    };
     updateDimText();
 
     // Dimension display
@@ -85,15 +89,15 @@ function createListeners() {
 
     // Qap clear
     document.getElementById("clear").onclick = () => {
-            qap.clear();
-            window.requestAnimationFrame(drawQap);
-        }
-        // Qap complete
+        qap.clear();
+        window.requestAnimationFrame(drawQap);
+    }
+    // Qap complete
     document.getElementById("complete").onclick = () => {
-            qap.complete();
-            window.requestAnimationFrame(drawQap);
-        }
-        // Qap random
+        qap.complete();
+        window.requestAnimationFrame(drawQap);
+    }
+    // Qap random
     const r = document.getElementById("random");
     r.onclick = () => {
         if (r.classList.contains("disabled"))
@@ -144,8 +148,8 @@ function saveSVG(element) {
             diamond.setAttribute("stroke", "#5c9");
             diamond.setAttribute("stroke-width", `1`);
             // We make up for the added stroke width by reducing the width
-            diamond.setAttribute("width", `${center*0.85}`);
-            diamond.setAttribute("height", `${center*0.85}`);
+            diamond.setAttribute("width", `${center * 0.85}`);
+            diamond.setAttribute("height", `${center * 0.85}`);
             diamond.setAttribute("x", `${center * 0.135}`);
             diamond.setAttribute("y", `${center * 0.135}`);
             diamond.setAttributeNS(xlink, "xlink:href", "#diamond");
@@ -238,8 +242,8 @@ function drawAffSpace() {
     let dist = (x1, y1, x2, y2) => Math.sqrt(Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2));
     let dCards = cards.enter().append("g")
         .classed("card", true)
-        .on('click', function(d) {
-            if (qap.excludesCount(d.card)) {
+        .on('click', function (d) {
+            if (qap.quadComplete(d.card)) {
                 return;
             }
             if (qap.contains(d.card))
@@ -248,7 +252,7 @@ function drawAffSpace() {
                 qap.add(d.card);
             window.requestAnimationFrame(drawQap);
         })
-        .on('mouseover', function(d) {
+        .on('mouseover', function (d) {
             // Compute which lines we want
             let quads = qap.excludesTriples(d.card);
             if (!quads || !quads.length)
@@ -260,15 +264,15 @@ function drawAffSpace() {
                 let minPathLength = Infinity;
                 let minPath;
                 let comparePathLengths = ([p1, p2, p3]) => {
-                        let d = dist(p1.x, p1.y, p2.x, p2.y) + dist(p2.x, p2.y, p3.x, p3.y);
-                        if (d < minPathLength) {
-                            minPathLength = d;
-                            minPath = [p1, p2, p3];
-                        }
+                    let d = dist(p1.x, p1.y, p2.x, p2.y) + dist(p2.x, p2.y, p3.x, p3.y);
+                    if (d < minPathLength) {
+                        minPathLength = d;
+                        minPath = [p1, p2, p3];
                     }
-                    [pts, [pts[1], pts[2], pts[0]],
-                        [pts[2], pts[0], pts[1]]
-                    ]
+                }
+                [pts, [pts[1], pts[2], pts[0]],
+                    [pts[2], pts[0], pts[1]]
+                ]
                     .forEach(comparePathLengths)
                 paths.push(minPath);
             }
@@ -285,15 +289,17 @@ function drawAffSpace() {
                 .attr("d", p => `M ${p[0].x} ${p[0].y} L ${p[1].x} ${p[1].y} L ${p[2].x} ${p[2].y}`);
 
         })
-        .on('mouseout', function(d) {
+        .on('mouseout', function (d) {
             d3.select("#lines")
                 .classed("hidden", true);
         })
     dCards.append("use")
         .attr("href", "#diamond")
         .classed("diamond", true);
+    // todo 
+    // control font size here
     dCards.append("text")
-        .attr("font-size", "25");
+        .attr("font-size", "7");
     dCards.append("rect");
     cards.exit()
         .each(d => qap.remove(d.card))
@@ -305,7 +311,7 @@ function drawAffSpace() {
         .attr("width", cellSize)
         .attr("height", cellSize);
     cards.select("text")
-        .attr("transform", `translate(${cellSize/2}, ${cellSize*0.8}) scale(${cellSize * 0.85/25})`);
+        .attr("transform", `translate(${cellSize / 2}, ${cellSize * 0.8}) scale(${cellSize * 0.85 / 25})`);
     cards.select("use")
         .attr("width", cellSize * 0.9)
         .attr("height", cellSize * 0.9)
@@ -333,7 +339,7 @@ function drawGridLines() {
     let gridYMax = (h + gridHeight) / 2;
 
     // Set the viewbox
-    qapSvg.attr("viewBox", `-5 ${gridYMin-5} 110 ${gridHeight+10}`);
+    qapSvg.attr("viewBox", `-5 ${gridYMin - 5} 110 ${gridHeight + 10}`);
     // Draw lines
     // Generate priority (ruler tickmarks) for lines
     let ruler = new Array(xL + 1).fill(0);
@@ -392,7 +398,7 @@ function drawQap() {
         .classed("in-qap", d => qap.contains(d.card))
         .classed("excluded", d => qap.excludesCount(d.card))
         .select("text")
-        .text(function(d) {
+        .text(function (d) {
             return qap.excludesCount(d.card) || 0;
         });
     d3.select("#cap-size")
@@ -402,14 +408,36 @@ function drawQap() {
 
     // Exclude counts
     // Start with excludes[0] being all elements
+    // We want to consider the spanned cap points as well
+
+    /*
     let excludes = [Math.pow(2, qap.dim) - qap.size()]
     for (let i of Object.values(qap.exclude)) {
+        // c = number of triples that sum to i
         let c = i.length / 3;
+
         while (excludes.length <= c)
             excludes.push(0)
         excludes[c] += 1;
         excludes[0]--;
     }
+    */
+
+    let excludes = [Math.pow(2, qap.dim)]
+    for (let exc in qap.exclude) {
+        // The affine combinations of a certain length
+        for (let sumLen in qap.exclude[exc]) {
+            let affCombosAmt = qap.exclude[exc][sumLen].length;
+            while (excludes.length <= sumLen)
+                excludes.push(0)
+            excludes[sumLen] += affCombosAmt
+            excludes[0]--;
+        }
+    }
+
+
+
+
     let convolved = [];
     for (let i = 0; i < excludes.length; i++) {
         let tot = 0;
@@ -420,7 +448,7 @@ function drawQap() {
     }
 
     const maxExcludeFactor = (d3.select("#exclude-counts")
-            .node().getBoundingClientRect().width - 5) *
+        .node().getBoundingClientRect().width - 5) *
         0.8 / 10 / Math.max(...excludes);
     let eC = d3.select("#exclude-counts")
         .selectAll(".exclude-count")
@@ -441,7 +469,7 @@ function drawQap() {
         .text(d => d);
 
     eC.select('.blue-bar')
-        .style('transform', d => `scaleX(${d*maxExcludeFactor})`);
+        .style('transform', d => `scaleX(${d * maxExcludeFactor})`);
 
     // convolve distribution
     let eCV = d3.select("#exclude-convolution")

@@ -8,46 +8,55 @@ class Qap {
     add(point) {
         if (point >= Math.pow(2, this.dim))
             throw new RangeError(`Point too large for dimension ${this.dim}`);
-        if (this.excludesCount(point))
+        if (this.quadComplete(point))
             throw new RangeError("Point excluded");
         // If we already have the point, just silently return
         // If we try to create excludes with a point we already have, we'll mess up our cap
         if (this.points.has(point))
             return;
-        // Update the exclude
-        for (let p1 of this.points) {
-            for (let p2 of this.points) {
-                if (p1 < p2) {
-                    let exc = point ^ p1 ^ p2;
-                    if (!this.exclude[exc])
-                        this.exclude[exc] = [];
-                    // None of these points can be in this.exclude[exc] yet.
-                    // Multiple excludes requires disjoint triples.
-                    // We put the smallest point first for simpler locating
-                    if (point < p1)
-                        this.exclude[exc].push(point, p1, p2)
-                    else
-                        this.exclude[exc].push(p1, point, p2)
+
+        this.points.add(point)
+        // Combinations of k-size with the newly added point
+        for (let sumLen = 3; sumLen <= this.points.size; sumLen += 2) {
+            for (let combination of this.point_combinations(point, sumLen)) {
+                let sum = 0;
+                for (let p of combination)
+                    sum ^= p;
+                if (sum == point)
+                    continue;
+                if (!this.exclude[sum]) {
+                    this.exclude[sum] = {}
                 }
+                if (!this.exclude[sum][sumLen]) {
+                    this.exclude[sum][sumLen] = []
+                }
+                let arr = this.exclude[sum][sumLen];
+                arr.push(combination);
+                this.exclude[sum][sumLen] = arr;
             }
         }
-        // Add the point
-        this.points.add(point)
     }
 
     remove(point) {
         if (!this.points.has(point))
             return;
         this.points.delete(point);
+
         // Trim the excludes.
-        for (let p1 of this.points) {
-            for (let p2 of this.points) {
-                if (p1 < p2) {
-                    let exc = point ^ p1 ^ p2;
-                    let del_index = this.exclude[exc].indexOf(Math.min(point, p1));
-                    if (del_index == -1)
-                        throw "Trying to remove point that wasn't included"
-                    this.exclude[exc].splice(del_index, 3);
+        for (let exc in this.exclude) {
+            // The affine combinations of a certain length
+            for (let sumLen in this.exclude[exc]) {
+                let affCombos = this.exclude[exc][sumLen];
+                // Arrays of affine combinations
+                for (let i = 0; i < sumLen.length; i++) {
+                    let affCombo = affCombos[i];
+                    // If the affine combination includes our target point, remove affine combination
+                    if (affCombo.includes(point))
+                        affCombos.splice(i, 1)
+                }
+                // If there does not exist anymore affine combinations of this length, delete key
+                if (affCombos.length == 0){
+                    delete this.exclude[exc][sumLen];
                 }
             }
         }
@@ -58,8 +67,22 @@ class Qap {
     excludesCount(point) {
         if (!this.exclude[point])
             return 0;
-        return this.exclude[point].length / 3;
+        let toReturn = []
+        for (const sumLen in this.exclude[point]) {
+            toReturn.push(sumLen)
+        }
+        return toReturn;
     }
+    /**
+     * Returns if a point is a sum of three cap-points
+     */
+    quadComplete(point) {
+        let excArr = this.excludesCount(point)
+        if (excArr == 0 || excArr.length == 0)
+            return false;
+        return excArr.includes('3')
+    }
+
     excludesTriples(point) {
         return this.exclude[point];
     }
@@ -206,5 +229,46 @@ class Qap {
     pad(s, size) {
         while (s.length < size) s = "0" + s;
         return s;
+    }
+    point_combinations(point, k) {
+        this.points.delete(point)
+        let combs = this.k_combinations(Array.from(this.points), k - 1)
+        this.points.add(point)
+        for (let comb of combs) {
+            comb.push(point)
+        }
+        return combs;
+    }
+
+    /**
+     * Gets k-sized combinations of a given array
+     * Copyright 2012 Akseli Palén.
+     * Created 2012-07-15.
+     * Licensed under the MIT license.
+     */
+    k_combinations(set, k) {
+        var i, j, combs, head, tailcombs;
+        if (k > set.length || k <= 0) {
+            return [];
+        }
+        if (k == set.length) {
+            return [set];
+        }
+        if (k == 1) {
+            combs = [];
+            for (i = 0; i < set.length; i++) {
+                combs.push([set[i]]);
+            }
+            return combs;
+        }
+        combs = [];
+        for (i = 0; i < set.length - k + 1; i++) {
+            head = set.slice(i, i + 1);
+            tailcombs = this.k_combinations(set.slice(i + 1), k - 1);
+            for (j = 0; j < tailcombs.length; j++) {
+                combs.push(head.concat(tailcombs[j]));
+            }
+        }
+        return combs;
     }
 }
