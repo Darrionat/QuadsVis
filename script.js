@@ -435,9 +435,7 @@ function drawQap() {
         }
     }
 
-
-
-
+    /*
     let convolved = [];
     for (let i = 0; i < excludes.length; i++) {
         let tot = 0;
@@ -446,6 +444,7 @@ function drawQap() {
         }
         convolved.push(tot);
     }
+    */
 
     const maxExcludeFactor = (d3.select("#exclude-counts")
         .node().getBoundingClientRect().width - 5) *
@@ -472,6 +471,7 @@ function drawQap() {
         .style('transform', d => `scaleX(${d * maxExcludeFactor})`);
 
     // convolve distribution
+    /*
     let eCV = d3.select("#exclude-convolution")
         .selectAll(".exclude-count")
         .data(convolved);
@@ -487,6 +487,7 @@ function drawQap() {
     eCV = eCV.merge(deCV);
     eCV.select("span.control-display")
         .text(d => d);
+    */
 }
 
 // Binomial Coefficient Computation

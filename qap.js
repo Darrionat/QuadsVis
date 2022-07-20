@@ -47,15 +47,19 @@ class Qap {
             // The affine combinations of a certain length
             for (let sumLen in this.exclude[exc]) {
                 let affCombos = this.exclude[exc][sumLen];
-                // Arrays of affine combinations
-                for (let i = 0; i < sumLen.length; i++) {
+                // Trim the affine combinations that include the point
+                var i = 0
+                while (i < affCombos.length) {
                     let affCombo = affCombos[i];
                     // If the affine combination includes our target point, remove affine combination
                     if (affCombo.includes(point))
                         affCombos.splice(i, 1)
+                    // Otherwise, move to the next
+                    else
+                        i++
                 }
                 // If there does not exist anymore affine combinations of this length, delete key
-                if (affCombos.length == 0){
+                if (affCombos.length == 0) {
                     delete this.exclude[exc][sumLen];
                 }
             }
